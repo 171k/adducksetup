@@ -1,11 +1,29 @@
 #!/usr/bin/env bash
 # =====================================================================
 #  (1) RUN ON THE VULNBOX.
-#  Auto-detects the values the Pwnbox dashboard needs, starts a rotating
-#  capture, and drops completed pcaps into  <base>/ready/  for the Pwnbox
-#  to rsync-pull. Needs tcpdump + sudo. Capture AUTHORISED interfaces only.
+#  Auto-detects the config, starts a rotating capture, and drops completed
+#  pcaps into <base>/ready/ for the Pwnbox to pull. Uses the system tcpdump,
+#  or the bundled copy in bin/ (staged on the Pwnbox) if the vulnbox has none.
 # =====================================================================
 set -uo pipefail
+KIT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# --- resolve which tcpdump to run ---
+if command -v tcpdump >/dev/null 2>&1; then
+  TCPDUMP="tcpdump"; LPENV=""
+  echo "[*] using the system tcpdump"
+elif [ -x "$KIT/bin/tcpdump" ]; then
+  TCPDUMP="$KIT/bin/tcpdump"; LPENV="LD_LIBRARY_PATH=$KIT/bin"
+  echo "[*] no system tcpdump -> using the bundled copy (bin/)"
+else
+  cat <<'EOF'
+[!] No tcpdump here, and none bundled. Fixes, in order:
+    1. On the PWNBOX: run setup.sh -> 's) stage tcpdump', then re-scp the kit.
+    2. Another capture tool?   which tshark dumpcap
+    3. Give up on packet capture -> use ItikGuard (app-level) + the scoreboard.
+EOF
+  exit 1
+fi
 
 echo "=== adducksetup : tcpdump (VULNBOX) ==="
 echo
@@ -23,8 +41,8 @@ BASE="${BASE:-$HOME/adduck_pcaps}"
 READY="$BASE/ready"
 mkdir -p "$READY"
 
-# tcpdump calls this hook (-z) when each rotated pcap finishes:
-# move the completed file into ready/ so rsync never grabs a half-written one.
+# tcpdump calls this when each rotated pcap finishes: move it into ready/
+# so the Pwnbox never pulls a half-written file.
 HOOK="$(mktemp /tmp/adduck_hook.XXXX.sh)"
 cat > "$HOOK" <<EOF
 #!/usr/bin/env bash
@@ -49,6 +67,8 @@ On the Pwnbox: run setup.sh, pick 2 (tulip) or 3 (pkappa), paste the above.
 [*] starting capture on $IFACE (${INTERVAL}s rotation). Ctrl+C to stop.
 EOF
 
-sudo tcpdump -n -i "$IFACE" "(tcp or udp) and not port 22" \
+RUN=(sudo)
+[ -n "$LPENV" ] && RUN=(sudo env "$LPENV")
+"${RUN[@]}" "$TCPDUMP" -n -i "$IFACE" "(tcp or udp) and not port 22" \
   -G "$INTERVAL" -w "$BASE/${IFACE}_%Y%m%d_%H%M%S.pcap" \
   -z "$HOOK" -Z root

@@ -3,6 +3,9 @@ tulip/
 pkappa2/
 pcaps/
 pcaps_incoming/
+adduck_pcaps/
+# staged tcpdump binary (created per-pwnbox by 's', never committed)
+bin/
 *.pcap
 *.pcap.*
 .env

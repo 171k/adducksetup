@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # =====================================================================
 #  adducksetup  -  A&D monitoring setup kit
-#  Run (1) on the VULNBOX, (2) or (3) on the PWNBOX.
+#  Run (1) on the VULNBOX, (2)/(3)/(s) on the PWNBOX.
 #  Flow:  vulnbox -> pick 1 -> it prints the config -> pwnbox -> pick 2 or 3
 #         -> paste the config -> dashboard comes up and pulls the pcaps.
+#  If the vulnbox has no tcpdump: on the PWNBOX pick 's' first, then scp.
 # =====================================================================
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
@@ -20,6 +21,8 @@ cat <<'EOF'
   1) tcpdump   capture  (run ON THE VULNBOX)
   2) tulip     dashboard (run ON THE PWNBOX)
   3) pkappa    dashboard (run ON THE PWNBOX)
+  s) stage     bundle the pwnbox's tcpdump into the kit, before scp
+               (PWNBOX, only needed if the vulnbox lacks tcpdump)
   4) status    docker ps
   q) quit
 ========================================
@@ -32,9 +35,10 @@ while true; do
   menu
   read -rp "choose> " c
   case "$c" in
-    1) bash "$HERE/lib/tcpdump.sh" || echo "[!] tcpdump step failed (see above)";;
-    2) bash "$HERE/lib/tulip.sh"   || echo "[!] tulip step failed (see above)";;
-    3) bash "$HERE/lib/pkappa.sh"  || echo "[!] pkappa step failed (see above)";;
+    1) bash "$HERE/lib/tcpdump.sh"       || echo "[!] tcpdump step failed (see above)";;
+    2) bash "$HERE/lib/tulip.sh"         || echo "[!] tulip step failed (see above)";;
+    3) bash "$HERE/lib/pkappa.sh"        || echo "[!] pkappa step failed (see above)";;
+    s|S) bash "$HERE/lib/stage-tcpdump.sh" || echo "[!] stage step failed (see above)";;
     4) docker ps ;;
     q|Q) echo "bye"; exit 0 ;;
     *) echo "?" ;;
