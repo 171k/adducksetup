@@ -9,3 +9,5 @@ bin/
 *.pcap
 *.pcap.*
 .env
+__pycache__/
+*.pyc
