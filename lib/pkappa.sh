@@ -40,7 +40,7 @@ if [ "${p:-N}" = y ]; then
   echo "[*] (tip: set up an SSH key first so it doesn't ask for a password each loop)"
   echo "[*] pulling every 5s. Ctrl+C to stop (pkappa2 keeps running)."
   while true; do
-    rsync -az --remove-source-files "$VB:$RD/" "$DIR/pcaps_incoming/" 2>/dev/null || echo "[!] rsync failed (ssh reachable?)"
+    rsync -az -e "ssh -o StrictHostKeyChecking=accept-new" --remove-source-files "$VB:$RD/" "$DIR/pcaps_incoming/" 2>/dev/null || echo "[!] rsync failed (ssh reachable?)"
     sleep 5
   done
 fi

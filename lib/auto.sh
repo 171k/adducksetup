@@ -58,6 +58,6 @@ echo "[*] Tulip -> http://127.0.0.1:3000/   (add FLAG_REGEX + TICK_LENGTH in $DI
 echo
 echo "[*] pulling pcaps every 5s. Ctrl+C to stop (Tulip + the capture keep running)."
 while true; do
-  rsync -az $SSHO --remove-source-files "$VB:~/adduck_pcaps/ready/" "$DIR/pcaps/" 2>/dev/null || echo "[!] pull failed (ssh reachable?)"
+  rsync -az -e "ssh $SSHO" --remove-source-files "$VB:~/adduck_pcaps/ready/" "$DIR/pcaps/" 2>/dev/null || echo "[!] pull failed (ssh reachable?)"
   sleep 5
 done
