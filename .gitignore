@@ -1,0 +1,8 @@
+# runtime / cloned tools (the script clones these at run time)
+tulip/
+pkappa2/
+pcaps/
+pcaps_incoming/
+*.pcap
+*.pcap.*
+.env
