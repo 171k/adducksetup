@@ -1,0 +1,8 @@
+services:
+  vulnbox:
+    build: .
+    container_name: adduck-test-vulnbox
+    ports:
+      - "2222:22"      # ssh (host:container)
+      - "8099:8080"    # vuln service
+    restart: unless-stopped
