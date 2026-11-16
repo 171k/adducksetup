@@ -1,48 +1,40 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  A&D Monitoring Setup Kit  —  menu-driven installer
-#  Tulip / pkappa2 dashboards (run on the PWNBOX) + tcpdump capture
-#  (run on the VULNBOX). Deterministic, offline-after-clone, no AI.
-#
-#  Usage:   bash setup.sh
-#  Only useful in SITUATION 1 (you can reach / SSH the Vulnbox to capture).
+#  adducksetup  -  A&D monitoring setup kit
+#  Run (1) on the VULNBOX, (2) or (3) on the PWNBOX.
+#  Flow:  vulnbox -> pick 1 -> it prints the config -> pwnbox -> pick 2 or 3
+#         -> paste the config -> dashboard comes up and pulls the pcaps.
 # =====================================================================
-
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-# --- pick whichever compose spelling this box has (Pwnbox often needs the hyphen)
-if docker compose version >/dev/null 2>&1; then
-  COMPOSE="docker compose"
-elif command -v docker-compose >/dev/null 2>&1; then
-  COMPOSE="docker-compose"
-else
-  echo "[!] Neither 'docker compose' nor 'docker-compose' found. Install Docker first."
-  exit 1
-fi
-export COMPOSE
-echo "[*] using compose command: $COMPOSE"
+# compose spelling (Pwnbox often needs the hyphen); only needed for 2/3
+if docker compose version >/dev/null 2>&1; then COMPOSE="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then COMPOSE="docker-compose"
+else COMPOSE=""; fi
+export COMPOSE HERE
 
 menu() {
-  cat <<'EOF'
+cat <<'EOF'
 
-============== A&D Monitoring Setup ==============
-  1) Tulip         PCAP analysis dashboard   (Pwnbox)
-  2) pkappa2       PCAP stream dashboard      (Pwnbox)
-  3) Tcpdump       capture on the Vulnbox  -> pcaps
-  4) Status        show running containers
-  q) Quit
-=================================================
-  NOTE: run ONE dashboard (1 or 2), not both.
+============== adducksetup ==============
+  1) tcpdump   capture  (run ON THE VULNBOX)
+  2) tulip     dashboard (run ON THE PWNBOX)
+  3) pkappa    dashboard (run ON THE PWNBOX)
+  4) status    docker ps
+  q) quit
+========================================
+  flow:  vulnbox (1) prints config  ->  pwnbox (2 or 3) paste it in
+  run ONE dashboard (2 OR 3), not both.
 EOF
 }
 
 while true; do
   menu
-  read -rp "choose> " choice
-  case "$choice" in
-    1) bash "$HERE/lib/tulip.sh"   || echo "[!] Tulip step failed (see above)";;
-    2) bash "$HERE/lib/pkappa.sh"  || echo "[!] pkappa2 step failed (see above)";;
-    3) bash "$HERE/lib/tcpdump.sh" || echo "[!] tcpdump step failed (see above)";;
+  read -rp "choose> " c
+  case "$c" in
+    1) bash "$HERE/lib/tcpdump.sh" || echo "[!] tcpdump step failed (see above)";;
+    2) bash "$HERE/lib/tulip.sh"   || echo "[!] tulip step failed (see above)";;
+    3) bash "$HERE/lib/pkappa.sh"  || echo "[!] pkappa step failed (see above)";;
     4) docker ps ;;
     q|Q) echo "bye"; exit 0 ;;
     *) echo "?" ;;

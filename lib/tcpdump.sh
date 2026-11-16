@@ -1,40 +1,54 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  Tcpdump capture  —  RUN THIS ON THE VULNBOX (Situation 1: you have shell).
-#  Captures rotating pcaps on the service interface and, on each rotation,
-#  either uploads to pkappa2 or leaves the file for Tulip (rsync/pull it).
-#
-#  Needs: tcpdump + sudo on the Vulnbox.  Only capture AUTHORISED interfaces.
+#  (1) RUN ON THE VULNBOX.
+#  Auto-detects the values the Pwnbox dashboard needs, starts a rotating
+#  capture, and drops completed pcaps into  <base>/ready/  for the Pwnbox
+#  to rsync-pull. Needs tcpdump + sudo. Capture AUTHORISED interfaces only.
 # =====================================================================
-set -euo pipefail
+set -uo pipefail
 
-IFACE="${IFACE:-game}"                 # <-- the service interface (find with: ip -br addr)
-INTERVAL="${INTERVAL:-30}"             # seconds per pcap file
-PCAP_DIR="${PCAP_DIR:-$PWD/pcaps}"
-MODE="${MODE:-move}"                   # move | pkappa
+echo "=== adducksetup : tcpdump (VULNBOX) ==="
+echo
+echo "[*] this box's interfaces + IPs  (your VM_IP is one of these):"
+ip -br addr 2>/dev/null | awk '{printf "    %-10s %s\n",$1,$3}' || hostname -I
+echo
+echo "[*] listening TCP ports  (your services are among these; ignore 22/ssh):"
+ss -tlnp 2>/dev/null | awk 'NR>1{print "    "$4}' | sort -u || echo "    (ss unavailable)"
+echo
 
-# only needed when MODE=pkappa :
-PKAPPA_URL="${PKAPPA_URL:-http://PWNBOX_IP:8080}"
-PKAPPA_PCAP_PASSWORD="${PKAPPA_PCAP_PASSWORD:-changeme}"
+read -rp "capture interface (e.g. eth0 / game): " IFACE
+IFACE="${IFACE:-eth0}"
+INTERVAL="${INTERVAL:-30}"
+BASE="${BASE:-$HOME/adduck_pcaps}"
+READY="$BASE/ready"
+mkdir -p "$READY"
 
-mkdir -p "$PCAP_DIR"
-
-# per-file completion hook that tcpdump calls (-z) when a pcap finishes
-HOOK="$(mktemp /tmp/_pcap_complete.XXXX.sh)"
+# tcpdump calls this hook (-z) when each rotated pcap finishes:
+# move the completed file into ready/ so rsync never grabs a half-written one.
+HOOK="$(mktemp /tmp/adduck_hook.XXXX.sh)"
 cat > "$HOOK" <<EOF
 #!/usr/bin/env bash
-f="\$1"
-if [ "$MODE" = pkappa ]; then
-  curl -s -u "admin:$PKAPPA_PCAP_PASSWORD" \
-       --data-binary "@\$f" "$PKAPPA_URL/upload/\$(basename "\$f")" && rm -f "\$f"
-fi
-# MODE=move: the pcap just stays in $PCAP_DIR — pull it to the Pwnbox:
-#   (on Pwnbox)  rsync -av --remove-source-files vulnbox:$PCAP_DIR/ ~/tulip/pcaps/
+mv "\$1" "$READY/" 2>/dev/null || true
 EOF
 chmod +x "$HOOK"
 
-echo "[*] IFACE=$IFACE  INTERVAL=${INTERVAL}s  DIR=$PCAP_DIR  MODE=$MODE"
-echo "[*] capturing (exclude SSH)... Ctrl+C to stop"
+MYUSER="$(whoami)"
+cat <<EOF
+
+############## COPY THIS TO THE PWNBOX ##############
+  vulnbox user@ip :  ${MYUSER}@<pick the IP from the list above>
+  pcap ready dir  :  $READY
+  capture iface   :  $IFACE
+  service IPs/ports: pick the service ports from the list above
+  ---- these come from the ORGANISER, not this box ----
+  FLAG_REGEX, TICK_LENGTH, TICK_START
+####################################################
+
+On the Pwnbox: run setup.sh, pick 2 (tulip) or 3 (pkappa), paste the above.
+
+[*] starting capture on $IFACE (${INTERVAL}s rotation). Ctrl+C to stop.
+EOF
+
 sudo tcpdump -n -i "$IFACE" "(tcp or udp) and not port 22" \
-  -G "$INTERVAL" -w "$PCAP_DIR/${IFACE}_%Y%m%d_%H%M%S.pcap" \
+  -G "$INTERVAL" -w "$BASE/${IFACE}_%Y%m%d_%H%M%S.pcap" \
   -z "$HOOK" -Z root
