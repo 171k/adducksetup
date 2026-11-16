@@ -9,6 +9,7 @@ bash setup.sh
 
 ```
 ============== adducksetup ==============
+  A) auto      do EVERYTHING from the pwnbox (give vulnbox ip + password once)
   1) tcpdump   capture  (run ON THE VULNBOX)
   2) tulip     dashboard (run ON THE PWNBOX)
   3) pkappa    dashboard (run ON THE PWNBOX)
@@ -16,6 +17,12 @@ bash setup.sh
   4) status    docker ps
   q) quit
 ```
+
+## Easiest: `A) auto` (one command, from the pwnbox)
+
+Run `bash setup.sh` on the **Pwnbox**, pick **A**, enter the vulnbox `user@ip`, and type the password **once**. It then, by itself: installs your SSH key (passwordless after that) → auto-detects the interface → pushes the capture script to the vulnbox → starts tcpdump there (detached) → brings up Tulip → pulls the pcaps. You only answer: vulnbox ip, interface (it guesses), and the password once. FLAG_REGEX / tick are optional — traffic shows without them.
+
+> **Test `A` in `test-lab/` before you trust it** — it's remote-heavy automation, and first-run bugs are normal. It needs: SSH to the vulnbox, the pwnbox online with RAM, and (if the vulnbox user isn't root) **passwordless sudo** on the vulnbox. If `A` chokes, the manual steps **1 / 2 / 3** below still work.
 
 ## The flow
 
